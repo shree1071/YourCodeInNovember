@@ -9,7 +9,8 @@ A compassionate mental health support platform with AI-powered chatbot, mood tra
 - 👥 **Community Support** - Connect with others on similar journeys
 - 💬 **Messaging** - Private messaging between users
 - 📱 **Modern UI** - Soothing, accessible design
-
+- 📱 **Games** - relaxing games
+   
 ## Setup
 
 ### Prerequisites
