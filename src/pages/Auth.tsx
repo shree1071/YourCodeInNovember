@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Heart, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { OPECLogo } from "@/components/OPECLogo";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -106,13 +107,13 @@ const Auth = () => {
     <div className="min-h-screen gradient-soft flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="animate-breathe mb-4 mx-auto w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-glow">
-            <Heart className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-4">
+            <OPECLogo size="lg" className="animate-breathe" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Wellness Wings
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            OPEC
           </h1>
-          <p className="text-muted-foreground mt-2">Your journey to better mental health</p>
+          <p className="text-muted-foreground mt-2">One-Page Emotional Check-ins</p>
         </div>
 
         <Card className="shadow-soft border-border/50 backdrop-blur-sm bg-card/80">

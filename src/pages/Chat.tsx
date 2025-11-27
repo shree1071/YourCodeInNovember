@@ -8,6 +8,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Send, Bot, User as UserIcon, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Gemini API Key (from Edge Function - prototype only, not for production!)
+const GEMINI_API_KEY = 'AIzaSyDQVe_vAKwleUu_Zfno58di2DGGYLLJr-I';
+
+// Initialize Google AI
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 interface Message {
   role: "user" | "assistant";
@@ -28,7 +35,19 @@ const Chat = () => {
 
   useEffect(() => {
     checkAuth();
-    loadChatHistory();
+    // Load chat history from localStorage if available
+    const savedMessages = localStorage.getItem('chat_messages');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        })));
+      } catch (e) {
+        console.error('Error loading saved messages:', e);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -48,30 +67,38 @@ const Chat = () => {
     }
   };
 
-  const loadChatHistory = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: true })
-      .limit(50);
-
-    if (error) {
-      console.error('Error loading chat history:', error);
-      return;
+  // Analyze sentiment from text
+  const analyzeSentiment = (text: string): { sentiment: string; score: number } => {
+    const lowerText = text.toLowerCase();
+    
+    const positiveWords = ['happy', 'joy', 'grateful', 'excited', 'love', 'wonderful', 'great', 'good', 'better', 'glad', 'thankful', 'hopeful'];
+    const negativeWords = ['sad', 'depressed', 'anxious', 'worried', 'scared', 'lonely', 'hurt', 'pain', 'crying', 'hopeless', 'afraid', 'angry', 'terrible', 'awful'];
+    
+    let positiveCount = 0;
+    let negativeCount = 0;
+    
+    positiveWords.forEach(word => {
+      if (lowerText.includes(word)) positiveCount++;
+    });
+    
+    negativeWords.forEach(word => {
+      if (lowerText.includes(word)) negativeCount++;
+    });
+    
+    const totalWords = positiveCount + negativeCount;
+    
+    if (totalWords === 0) {
+      return { sentiment: 'neutral', score: 0.5 };
     }
-
-    if (data) {
-      const loadedMessages: Message[] = data.map(msg => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-        timestamp: new Date(msg.created_at),
-        sentiment: msg.sentiment,
-      }));
-      setMessages(loadedMessages);
+    
+    const positiveRatio = positiveCount / totalWords;
+    
+    if (positiveRatio > 0.6) {
+      return { sentiment: 'positive', score: Math.min(0.99, 0.6 + (positiveRatio * 0.3)) };
+    } else if (positiveRatio < 0.4) {
+      return { sentiment: 'negative', score: Math.max(-0.99, -0.6 - ((1 - positiveRatio) * 0.3)) };
+    } else {
+      return { sentiment: 'neutral', score: 0.5 };
     }
   };
 
@@ -84,60 +111,101 @@ const Chat = () => {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
+    // Save to localStorage
+    localStorage.setItem('chat_messages', JSON.stringify(updatedMessages));
+
     try {
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { message: input, userId }
+      // Use Google AI SDK to call Gemini API (handles CORS properly)
+      const systemInstruction = `You are a compassionate mental health support AI assistant. Your role is to:
+- Listen actively and empathetically to users' concerns
+- Provide emotional validation and support
+- Suggest healthy coping strategies when appropriate
+- Detect the emotional tone of conversations
+- NEVER provide medical diagnosis or replace professional help
+- If someone is in crisis, gently encourage them to reach out to crisis helplines
+
+Keep responses warm, understanding, and supportive. Be concise but caring.`;
+
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-pro",
+        systemInstruction: systemInstruction,
+      });
+      
+      // Convert conversation history to the format expected by the SDK
+      const chat = model.startChat({
+        history: messages.slice(-10).map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }],
+        })),
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
+      // Send the current message
+      const result = await chat.sendMessage(input);
+      const response = await result.response;
+      const assistantMessage = response.text();
 
-      // Check if the response contains an error
-      if (data?.error) {
-        console.error('Function returned error:', data.error);
-        throw new Error(data.error);
-      }
+      // Analyze sentiment
+      const sentimentAnalysis = analyzeSentiment(input);
 
-      if (!data?.message) {
-        console.error('No message in response:', data);
-        throw new Error('Invalid response from AI service');
-      }
-
-      if (data.needsCrisisSupport) {
+      // Check for crisis keywords
+      const crisisKeywords = ['suicide', 'kill myself', 'end it all', 'want to die', 'no reason to live'];
+      const needsCrisisSupport = crisisKeywords.some(keyword => input.toLowerCase().includes(keyword));
+      
+      if (needsCrisisSupport) {
         setShowCrisisAlert(true);
       }
 
       const aiMessage: Message = {
         role: "assistant",
-        content: data.message,
+        content: assistantMessage,
         timestamp: new Date(),
-        sentiment: data.sentiment,
+        sentiment: sentimentAnalysis.sentiment,
       };
       
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error: any) {
-      console.error('Error calling AI chat:', error);
-      const errorMessage = error?.message || error?.error || 'Failed to get AI response. Please try again.';
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
       
-      // Show more helpful error messages
-      let userFriendlyMessage = errorMessage;
-      if (errorMessage.includes('GEMINI_API_KEY')) {
-        userFriendlyMessage = 'API key not configured. Please add GEMINI_API_KEY in Supabase project settings.';
-      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        userFriendlyMessage = 'Edge function not found. Please deploy the ai-chat function to Supabase.';
-      } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-        userFriendlyMessage = 'API key invalid or unauthorized. Please check your Gemini API key.';
+      // Save to localStorage
+      localStorage.setItem('chat_messages', JSON.stringify(finalMessages));
+
+      // Optionally save to Supabase for persistence (non-blocking)
+      if (userId) {
+        supabase.from('chat_messages').insert([
+          {
+            user_id: userId,
+            role: 'user',
+            content: input,
+            sentiment: sentimentAnalysis.sentiment,
+            sentiment_score: sentimentAnalysis.score,
+          },
+          {
+            user_id: userId,
+            role: 'assistant',
+            content: assistantMessage,
+            sentiment: sentimentAnalysis.sentiment,
+          }
+        ]).catch(err => {
+          console.error('Error saving to Supabase (non-critical):', err);
+        });
       }
+    } catch (error: any) {
+      console.error('Error calling Gemini API:', error);
+      const errorMessage = error?.message || 'Failed to get AI response. Please try again.';
       
       toast({
         title: "Error",
-        description: userFriendlyMessage,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

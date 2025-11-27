@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Red figure - Top -->
+  <g transform="translate(60, 10)">
+    <circle cx="0" cy="0" r="8" fill="#EF4444" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#EF4444"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Periwinkle Blue - Top Right -->
+  <g transform="translate(95, 30) rotate(60)">
+    <circle cx="0" cy="0" r="8" fill="#8B5CF6" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#8B5CF6"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Sky Blue - Bottom Right -->
+  <g transform="translate(95, 90) rotate(120)">
+    <circle cx="0" cy="0" r="8" fill="#06B6D4" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#06B6D4"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Lime Green - Bottom -->
+  <g transform="translate(60, 110) rotate(180)">
+    <circle cx="0" cy="0" r="8" fill="#84CC16" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#84CC16"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Orange - Bottom Left -->
+  <g transform="translate(25, 90) rotate(240)">
+    <circle cx="0" cy="0" r="8" fill="#F97316" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#F97316"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Yellow - Top Left -->
+  <g transform="translate(25, 30) rotate(300)">
+    <circle cx="0" cy="0" r="8" fill="#EAB308" />
+    <path
+      d="M -6 8 Q 0 20 6 8"
+      stroke="#EAB308"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+  </g>
+</svg>
+

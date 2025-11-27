@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { AmbientPlayer } from "@/components/AmbientPlayer";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -12,6 +13,7 @@ import Messages from "./pages/Messages";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
 import Games from "./pages/Games";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,8 +75,18 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {/* Global Ambient Player - persists across all pages */}
+        <AmbientPlayer />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
