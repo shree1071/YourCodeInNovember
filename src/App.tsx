@@ -11,6 +11,7 @@ import Chat from "./pages/Chat";
 import Messages from "./pages/Messages";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
+import Games from "./pages/Games";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/games"
+            element={
+              <ProtectedRoute>
+                <Games />
               </ProtectedRoute>
             }
           />

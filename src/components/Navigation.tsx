@@ -10,7 +10,7 @@ import {
   UserButton 
 } from "@clerk/clerk-react";
 import { useUser } from "@clerk/clerk-react";
-import { Home, MessageSquare, Users, User, Heart } from "lucide-react";
+import { Home, MessageSquare, Users, User, Heart, Gamepad2 } from "lucide-react";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -43,6 +43,7 @@ const Navigation = () => {
     { path: "/chat", icon: Heart, label: "AI Support" },
     { path: "/messages", icon: MessageSquare, label: "Messages" },
     { path: "/community", icon: Users, label: "Community" },
+    { path: "/games", icon: Gamepad2, label: "Games" },
     { path: "/profile", icon: User, label: "Profile" },
   ];
 

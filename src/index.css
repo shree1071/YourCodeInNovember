@@ -130,8 +130,23 @@ All colors MUST be HSL.
     animation: breathe 4s ease-in-out infinite;
   }
 
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+
   @keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 0.6; }
-    50% { transform: scale(1.05); opacity: 1; }
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

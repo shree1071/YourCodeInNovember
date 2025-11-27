@@ -19,13 +19,10 @@ serve(async (req) => {
       throw new Error("userId and checkInId are required");
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Prototype: Using API key directly (NOT for production!)
+    const GEMINI_API_KEY = 'AIzaSyDQVe_vAKwleUu_Zfno58di2DGGYLLJr-I';
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -82,36 +79,40 @@ Please respond in STRICT JSON with the following shape:
 
 Do not include any extra keys, markdown, or commentary. Keep language simple, supportive, and non-diagnostic.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Google Gemini API directly
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a supportive, non-judgmental emotional wellbeing assistant. You never diagnose or mention disorders. You keep things short, gentle, and practical.",
-          },
+        contents: [
           {
             role: "user",
-            content: prompt,
-          },
+            parts: [
+              {
+                text: `You are a supportive, non-judgmental emotional wellbeing assistant. You never diagnose or mention disorders. You keep things short, gentle, and practical.\n\n${prompt}`
+              }
+            ]
+          }
         ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", aiResponse.status, errorText);
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      console.error("Gemini API error:", aiResponse.status, errorText);
+      throw new Error(`Gemini API error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    const rawContent = aiData.choices?.[0]?.message?.content ?? "";
+    const rawContent = aiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
     let parsed;
     try {

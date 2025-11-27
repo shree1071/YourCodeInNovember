@@ -19,7 +19,8 @@ serve(async (req) => {
       throw new Error('Message and userId are required');
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    // Prototype: Using API key directly (NOT for production!)
+    const GEMINI_API_KEY = 'AIzaSyDQVe_vAKwleUu_Zfno58di2DGGYLLJr-I';
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -32,29 +33,23 @@ serve(async (req) => {
       content: message,
     });
 
-    // Get recent conversation history for context
+    // Get recent conversation history for context (excluding the message we just saved)
     const { data: recentMessages } = await supabase
       .from('chat_messages')
       .select('role, content')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(12); // Get a few extra to account for the current message
 
-    const conversationHistory = recentMessages?.reverse() || [];
+    // Filter out the current message if it's already in the history, and reverse to chronological order
+    const conversationHistory = (recentMessages || [])
+      .filter(msg => msg.content !== message) // Exclude current message if it's already saved
+      .reverse()
+      .slice(-10); // Keep last 10 messages for context
     
-    // Call Lovable AI
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a compassionate mental health support AI assistant. Your role is to:
+    // Build conversation context for Gemini
+    // Gemini doesn't have a system role, so we'll include instructions in the first user message
+    const systemInstruction = `You are a compassionate mental health support AI assistant. Your role is to:
 - Listen actively and empathetically to users' concerns
 - Provide emotional validation and support
 - Suggest healthy coping strategies when appropriate
@@ -62,22 +57,75 @@ serve(async (req) => {
 - NEVER provide medical diagnosis or replace professional help
 - If someone is in crisis, gently encourage them to reach out to crisis helplines
 
-After each response, analyze the user's message sentiment and include it in your thinking.`
-          },
-          ...conversationHistory,
-          { role: 'user', content: message }
-        ],
+Keep responses warm, understanding, and supportive. Be concise but caring.`;
+
+    // Convert conversation history to Gemini format
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+    
+    // If this is the first message, add system instruction context
+    if (conversationHistory.length === 0) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: `${systemInstruction}\n\nUser: ${message}` }]
+      });
+    } else {
+      // Add system instruction as context in the first exchange
+      contents.push({
+        role: 'user',
+        parts: [{ text: systemInstruction }]
+      });
+      contents.push({
+        role: 'model',
+        parts: [{ text: 'I understand. I\'m here to listen and provide support. How can I help you today?' }]
+      });
+
+      // Add conversation history (alternating user/model)
+      for (const msg of conversationHistory) {
+        if (msg.role === 'user') {
+          contents.push({
+            role: 'user',
+            parts: [{ text: msg.content }]
+          });
+        } else if (msg.role === 'assistant') {
+          contents.push({
+            role: 'model',
+            parts: [{ text: msg.content }]
+          });
+        }
+      }
+
+      // Add current user message
+      contents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
+    }
+    
+    // Call Google Gemini API directly
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: contents,
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI Gateway error:', aiResponse.status, errorText);
-      throw new Error(`AI Gateway error: ${aiResponse.status}`);
+      console.error('Gemini API error:', aiResponse.status, errorText);
+      throw new Error(`Gemini API error: ${aiResponse.status} - ${errorText}`);
     }
 
     const aiData = await aiResponse.json();
-    const assistantMessage = aiData.choices[0].message.content;
+    const assistantMessage = aiData.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, but I encountered an error processing your message. Please try again.';
 
     // Simple sentiment analysis based on keywords
     const analyzeSentiment = (text: string): { sentiment: string; score: number } => {

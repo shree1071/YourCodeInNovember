@@ -93,7 +93,21 @@ const Chat = () => {
         body: { message: input, userId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      // Check if the response contains an error
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
+
+      if (!data?.message) {
+        console.error('No message in response:', data);
+        throw new Error('Invalid response from AI service');
+      }
 
       if (data.needsCrisisSupport) {
         setShowCrisisAlert(true);
@@ -109,9 +123,21 @@ const Chat = () => {
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error: any) {
       console.error('Error calling AI chat:', error);
+      const errorMessage = error?.message || error?.error || 'Failed to get AI response. Please try again.';
+      
+      // Show more helpful error messages
+      let userFriendlyMessage = errorMessage;
+      if (errorMessage.includes('GEMINI_API_KEY')) {
+        userFriendlyMessage = 'API key not configured. Please add GEMINI_API_KEY in Supabase project settings.';
+      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        userFriendlyMessage = 'Edge function not found. Please deploy the ai-chat function to Supabase.';
+      } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+        userFriendlyMessage = 'API key invalid or unauthorized. Please check your Gemini API key.';
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to get AI response. Please try again.",
+        description: userFriendlyMessage,
         variant: "destructive",
       });
     } finally {
@@ -123,73 +149,83 @@ const Chat = () => {
     <div className="min-h-screen gradient-soft">
       <Navigation />
       
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 pb-24">
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full gradient-primary mb-4 animate-breathe shadow-glow">
+            <Bot className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent mb-3">
             AI Support Chat
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Share your thoughts in a safe, judgment-free space
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Share your thoughts in a safe, judgment-free space. I'm here to listen and support you.
           </p>
         </div>
 
         {showCrisisAlert && (
-          <Alert variant="destructive" className="mb-4 animate-fade-in">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              If you're in crisis, please reach out immediately:
-              <br />
-              • National Suicide Prevention Lifeline: <strong>988</strong>
-              <br />
-              • Crisis Text Line: Text <strong>HOME to 741741</strong>
-              <br />
-              • SAMHSA National Helpline: <strong>1-800-662-4357</strong>
+          <Alert variant="destructive" className="mb-6 animate-fade-in border-2 shadow-lg">
+            <AlertCircle className="h-5 w-5" />
+            <AlertDescription className="text-base">
+              <strong className="text-lg block mb-2">If you're in crisis, please reach out immediately:</strong>
+              <div className="space-y-1.5">
+                <div>• National Suicide Prevention Lifeline: <strong className="text-lg">988</strong></div>
+                <div>• Crisis Text Line: Text <strong className="text-lg">HOME to 741741</strong></div>
+                <div>• SAMHSA National Helpline: <strong className="text-lg">1-800-662-4357</strong></div>
+              </div>
             </AlertDescription>
           </Alert>
         )}
 
-        <Card className="shadow-soft border-border/50 backdrop-blur-sm bg-card/80 mb-4 min-h-[500px] max-h-[600px] overflow-y-auto p-4">
+        <Card className="shadow-soft border-border/50 backdrop-blur-md bg-card/90 mb-6 min-h-[550px] max-h-[650px] overflow-y-auto p-6 rounded-3xl">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[460px] text-center">
-              <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mb-4 animate-breathe shadow-glow">
-                <Bot className="w-8 h-8 text-white" />
+            <div className="flex flex-col items-center justify-center h-[500px] text-center px-4">
+              <div className="relative mb-6">
+                <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center animate-breathe shadow-glow">
+                  <Bot className="w-12 h-12 text-white" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-400 rounded-full border-4 border-card animate-pulse"></div>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Start a conversation</h3>
-              <p className="text-muted-foreground max-w-md">
-                I'm here to listen and provide emotional support. Share what's on your mind.
+              <h3 className="text-2xl font-semibold mb-3 text-foreground">Start a conversation</h3>
+              <p className="text-muted-foreground max-w-md text-base leading-relaxed">
+                I'm here to listen and provide emotional support. Share what's on your mind, and I'll be here with you every step of the way.
               </p>
+              <div className="mt-8 flex flex-wrap gap-2 justify-center">
+                <span className="px-4 py-2 bg-muted/50 rounded-full text-sm text-muted-foreground">✨ Non-judgmental</span>
+                <span className="px-4 py-2 bg-muted/50 rounded-full text-sm text-muted-foreground">💙 Confidential</span>
+                <span className="px-4 py-2 bg-muted/50 rounded-full text-sm text-muted-foreground">🌱 Supportive</span>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`flex gap-3 animate-fade-in ${
+                  className={`flex gap-4 animate-fade-in ${
                     message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-soft flex-shrink-0">
-                      <Bot className="w-4 h-4 text-white" />
+                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shadow-soft flex-shrink-0 mt-1">
+                      <Bot className="w-5 h-5 text-white" />
                     </div>
                   )}
                   <div
-                    className={`max-w-[70%] p-4 rounded-2xl transition-smooth ${
+                    className={`max-w-[75%] p-5 rounded-3xl transition-smooth ${
                       message.role === "user"
-                        ? "bg-primary text-primary-foreground shadow-soft"
-                        : "bg-muted"
+                        ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl"
+                        : "bg-gradient-to-br from-muted to-muted/80 shadow-md hover:shadow-lg"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <p className="text-xs opacity-60">
-                        {message.timestamp.toLocaleTimeString()}
+                    <p className="text-base whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                    <div className="flex items-center gap-3 mt-3 pt-2 border-t border-border/20">
+                      <p className="text-xs opacity-70">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                       {message.sentiment && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          message.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
-                          message.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                          message.sentiment === 'positive' ? 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                          message.sentiment === 'negative' ? 'bg-rose-100/80 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
+                          'bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                         }`}>
                           {message.sentiment}
                         </span>
@@ -197,22 +233,23 @@ const Chat = () => {
                     </div>
                   </div>
                   {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shadow-soft flex-shrink-0">
-                      <UserIcon className="w-4 h-4 text-white" />
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center shadow-soft flex-shrink-0 mt-1">
+                      <UserIcon className="w-5 h-5 text-white" />
                     </div>
                   )}
                 </div>
               ))}
               {loading && (
-                <div className="flex gap-3 justify-start animate-fade-in">
-                  <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center shadow-soft">
-                    <Bot className="w-4 h-4 text-white" />
+                <div className="flex gap-4 justify-start animate-fade-in">
+                  <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center shadow-soft">
+                    <Bot className="w-5 h-5 text-white" />
                   </div>
-                  <div className="bg-muted p-4 rounded-2xl">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="bg-gradient-to-br from-muted to-muted/80 p-5 rounded-3xl shadow-md">
+                    <div className="flex gap-2 items-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms" }} />
+                      <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "400ms" }} />
+                      <span className="ml-2 text-sm text-muted-foreground">Thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -222,21 +259,22 @@ const Chat = () => {
           )}
         </Card>
 
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-end sticky bottom-4 bg-card/80 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-border/50">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder="Type your message..."
-            className="flex-1"
+            placeholder="Share what's on your mind..."
+            className="flex-1 text-base py-6 rounded-xl border-2 focus:border-primary/50 transition-all"
             disabled={loading}
           />
           <Button
             onClick={handleSend}
-            className="gradient-primary text-white"
+            className="gradient-primary text-white px-6 py-6 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading || !input.trim()}
+            size="lg"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-5 h-5" />
           </Button>
         </div>
       </div>
