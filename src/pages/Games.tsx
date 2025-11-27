@@ -1,33 +1,59 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, Sparkles } from "lucide-react";
+import { Gamepad2, Sparkles, Circle, Coffee, Grid3x3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface Game {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const games: Game[] = [
+  {
+    id: "bubble-circle",
+    name: "Bubble Circle",
+    description: "A relaxing bubble popping game to help you destress and take your mind off things.",
+    url: "https://cdn.htmlgames.com/BubbleCircle/",
+    icon: Circle,
+  },
+  {
+    id: "coffee-mahjong",
+    name: "Coffee Mahjong",
+    description: "A soothing mahjong solitaire game with a warm coffee theme. Match tiles and relax.",
+    url: "https://cdn.htmlgames.com/CoffeeMahjong/",
+    icon: Coffee,
+  },
+  {
+    id: "cup-of-tea-mahjong",
+    name: "Cup of Tea Mahjong",
+    description: "A soothing mahjong solitaire game with a calming tea theme. Match tiles and relax.",
+    url: "https://cdn.htmlgames.com/CupOfTeaMahjong/",
+    icon: Coffee,
+  },
+  // Placeholder for 2 more games
+  {
+    id: "game-4",
+    name: "Game 4",
+    description: "Coming soon - More relaxing games to help you unwind.",
+    url: "",
+    icon: Grid3x3,
+  },
+  {
+    id: "game-5",
+    name: "Game 5",
+    description: "Coming soon - More relaxing games to help you unwind.",
+    url: "",
+    icon: Grid3x3,
+  },
+];
 
 const Games = () => {
-  const [gameLoaded, setGameLoaded] = useState(false);
-
-  useEffect(() => {
-    // Try to load the game using the embed script
-    const script = document.createElement("script");
-    script.src = "https://cdn.htmlgames.com/embed.js?game=BubbleCircle&bgcolor=white";
-    script.async = true;
-    script.onload = () => setGameLoaded(true);
-    
-    // Check if script already exists
-    const existingScript = document.querySelector('script[src*="htmlgames.com"]');
-    if (!existingScript) {
-      document.body.appendChild(script);
-    } else {
-      setGameLoaded(true);
-    }
-    
-    // Clean up
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-  }, []);
+  const [selectedGame, setSelectedGame] = useState(games[0].id);
+  const selectedGameData = games.find((g) => g.id === selectedGame) || games[0];
 
   return (
     <div className="min-h-screen gradient-soft">
@@ -47,37 +73,64 @@ const Games = () => {
         </div>
 
         <Card className="shadow-soft border-border/50 backdrop-blur-md bg-card/90 rounded-3xl p-6">
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-6 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="text-2xl font-semibold">Bubble Circle</h2>
-          </div>
-          <p className="text-muted-foreground mb-6">
-            A relaxing bubble popping game to help you destress and take your mind off things.
-          </p>
-          
-          <div className="bg-white rounded-2xl p-4 shadow-lg overflow-hidden">
-            {/* Primary embed method using iframe */}
-            <iframe
-              src="https://cdn.htmlgames.com/BubbleCircle/"
-              title="Bubble Circle Game"
-              className="w-full h-[600px] border-0 rounded-xl"
-              allow="fullscreen"
-              allowFullScreen
-              loading="lazy"
-            />
+            <h2 className="text-2xl font-semibold">Select a Game</h2>
           </div>
 
-          {/* Fallback: Script-based embed */}
-          {!gameLoaded && (
-            <div className="mt-4 bg-white rounded-2xl p-4 shadow-lg min-h-[600px] flex items-center justify-center">
-              <div className="flex flex-col items-center justify-center text-muted-foreground">
-                <div className="animate-bounce mb-4">
-                  <Gamepad2 className="w-16 h-16" />
-                </div>
-                <p className="text-lg">Loading game...</p>
-              </div>
+          {/* Game Grid Selector */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
+            {games.map((game) => {
+              const Icon = game.icon;
+              const isSelected = selectedGame === game.id;
+              const isAvailable = !!game.url;
+              
+              return (
+                <Button
+                  key={game.id}
+                  variant={isSelected ? "default" : "outline"}
+                  className={`flex flex-col items-center gap-2 h-auto py-4 px-3 ${
+                    isSelected ? "gradient-primary text-white" : ""
+                  } ${!isAvailable ? "opacity-50 cursor-not-allowed" : ""}`}
+                  onClick={() => isAvailable && setSelectedGame(game.id)}
+                  disabled={!isAvailable}
+                >
+                  <Icon className="w-6 h-6" />
+                  <span className="text-xs text-center leading-tight">{game.name}</span>
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Game Display */}
+          <div className="mt-6">
+            <div className="mb-4">
+              <h3 className="text-xl font-semibold mb-2">{selectedGameData.name}</h3>
+              <p className="text-muted-foreground">{selectedGameData.description}</p>
             </div>
-          )}
+            
+            {selectedGameData.url ? (
+              <div className="bg-white rounded-2xl p-4 shadow-lg overflow-hidden">
+                <iframe
+                  key={selectedGame}
+                  src={selectedGameData.url}
+                  title={selectedGameData.name}
+                  className="w-full h-[600px] border-0 rounded-xl"
+                  allow="fullscreen"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-8 shadow-lg min-h-[600px] flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <Grid3x3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">This game is coming soon!</p>
+                  <p className="text-sm mt-2">Check back later for more relaxing games.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </Card>
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
@@ -89,4 +142,3 @@ const Games = () => {
 };
 
 export default Games;
-
