@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Card } from "@/components/ui/card";
-import { Gamepad2, Sparkles, Circle, Coffee, Grid3x3 } from "lucide-react";
+import { Gamepad2, Sparkles, Circle, Coffee, Grid3x3, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Game {
@@ -34,20 +34,19 @@ const games: Game[] = [
     url: "https://cdn.htmlgames.com/CupOfTeaMahjong/",
     icon: Coffee,
   },
-  // Placeholder for 2 more games
   {
-    id: "game-4",
-    name: "Game 4",
-    description: "Coming soon - More relaxing games to help you unwind.",
-    url: "",
-    icon: Grid3x3,
+    id: "connect-the-bubbles",
+    name: "Connect The Bubbles",
+    description: "A relaxing puzzle game where you connect matching bubbles. Perfect for stress relief.",
+    url: "https://cdn.htmlgames.com/ConnectTheBubbles/",
+    icon: Circle,
   },
   {
-    id: "game-5",
-    name: "Game 5",
-    description: "Coming soon - More relaxing games to help you unwind.",
-    url: "",
-    icon: Grid3x3,
+    id: "plushy-animals",
+    name: "Plushy Animals",
+    description: "A cute and relaxing game with adorable plushy animals. Perfect for unwinding and feeling calm.",
+    url: "https://cdn.htmlgames.com/PlushyAnimals/",
+    icon: Heart,
   },
 ];
 
